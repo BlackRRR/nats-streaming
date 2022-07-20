@@ -1,0 +1,9 @@
+config:
+  service_port: "8011"
+
+  db_conn_config:
+    user: "BlackR"
+    host: "localhost"
+    password: ""
+    db_name: "nats_streaming_db"
+    pool_max_conns: "10"
