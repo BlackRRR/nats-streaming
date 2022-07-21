@@ -2,25 +2,28 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"net/http"
 )
 
-func (h *Handler) GetModel(c *gin.Context) {
+func (h *Handler) GetOrder(c *gin.Context) {
 	id := c.Param("id")
 
 	order, err := h.Service.GetOrder(id)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, err.Error())
+		c.HTML(http.StatusInternalServerError, "page.html", gin.H{
+			"text": "failed to get order",
+		})
 		return
 	}
 
 	if order == nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, errors.New("order null"))
+		c.HTML(http.StatusNotFound, "page.html", gin.H{
+			"text": "order not found",
+		})
 		return
 	}
 
-	c.HTML(http.StatusAccepted, "page.html", gin.H{
+	c.HTML(http.StatusOK, "page.html", gin.H{
 		"text": string(order),
 	})
 }

@@ -17,7 +17,7 @@ func NewClient(url string) Client {
 }
 
 func Test_http(t *testing.T) {
-	var model model2.Model
+	var model model2.Order
 	c := NewClient("http://localhost:8011/b563feb7b2b84b6test")
 	res, err := c.NewRequest(nil, http.MethodGet)
 	if err != nil {

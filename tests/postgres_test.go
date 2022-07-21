@@ -21,7 +21,7 @@ func TestPostgres(t *testing.T) {
 		t.Errorf("failed to init postgres %s", err.Error())
 	}
 
-	postgresRepository := &nats_streaming.PostgresRepository{Ctx: ctx, ConnPool: dbConn}
+	postgresRepository := &nats_streaming.Repository{Ctx: ctx, ConnPool: dbConn}
 
 	err = postgresRepository.CreateOrder("b563feb7b2b84b6test", []byte(`"order_uid": "b563feb7b2b84b6test",
 	  "track_number": "WBILMTESTTRACK",
@@ -36,7 +36,7 @@ func TestPostgres(t *testing.T) {
 	    "email": "test@gmail.com"
 	  },
 	  "payment": {
-	    "transaction": "b563feb7b2b84b6test",
+	    "transaction": "8e1cb3b7-4a36-4e96-b856-6f7a6aa6ad0d",
 	    "request_id": "",
 	    "currency": "USD",
 	    "provider": "wbpay",

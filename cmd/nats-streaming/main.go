@@ -24,14 +24,14 @@ func main() {
 		log.Fatalf("failed to init config %s", err.Error())
 	}
 
-	log.Println("init config success")
+	log.Println("Init config success")
 
 	dbConn, err := pgxpool.ConnectConfig(ctx, cfg.PGConfig)
 	if err != nil {
 		log.Fatalf("failed to init postgres %s", err.Error())
 	}
 
-	log.Println("connect database success")
+	log.Println("Connect database success")
 
 	repositories, err := repository.InitRepositories(ctx, dbConn)
 	if err != nil {
@@ -59,7 +59,7 @@ func main() {
 		log.Fatalf("Can't connect: %v.", err)
 	}
 
-	log.Println("Connected NATS Streaming subsystem")
+	log.Println("Connected NATS Streaming subsystem success")
 
 	handler := server.NewHandler(service)
 
@@ -74,22 +74,23 @@ func main() {
 	}()
 
 	go func(stan.Conn) {
-		_, err = sc.Subscribe("foo", func(msg *stan.Msg) {
-			//fmt.Printf("new data %s", string(msg.Data))
-			if err != nil {
-				log.Printf("failed to subscribe %s", err.Error())
-			}
-
-			err = service.SaveModelInPostgres(msg)
+		_, err = sc.Subscribe("channel", func(msg *stan.Msg) {
+			err = service.SaveModelInRepository(msg)
 			if err != nil {
 				log.Printf("service failed `Save model in postgres` %s", err.Error())
+				return
 			}
 
 			err = service.SaveModelInCache(msg)
 			if err != nil {
 				log.Printf("service failed `Save model in cache` %s", err.Error())
 			}
+			return
 		})
+		if err != nil {
+			log.Printf("failed to subscribe %s", err.Error())
+			return
+		}
 	}(sc)
 
 	sig := <-subscribeToSystemSignals()

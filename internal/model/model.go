@@ -5,12 +5,12 @@ import (
 	"time"
 )
 
-type PostgresModel struct {
+type RepositoryModel struct {
 	Id    string          `json:"id"`
 	Order json.RawMessage `json:"order_model"`
 }
 
-type Model struct {
+type Order struct {
 	OrderUid          string    `json:"order_uid"`
 	TrackNumber       string    `json:"track_number"`
 	Entry             string    `json:"entry"`

@@ -8,7 +8,7 @@ import (
 )
 
 type Repositories struct {
-	*nats_streaming.PostgresRepository
+	*nats_streaming.Repository
 }
 
 func InitRepositories(ctx context.Context, pool *pgxpool.Pool) (*Repositories, error) {

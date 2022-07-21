@@ -9,14 +9,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-type PostgresRepository struct {
+type Repository struct {
 	Ctx context.Context
 
 	ConnPool *pgxpool.Pool
 }
 
-func NewRepository(ctx context.Context, connPool *pgxpool.Pool) (*PostgresRepository, error) {
-	pgRep := &PostgresRepository{Ctx: ctx, ConnPool: connPool}
+func NewRepository(ctx context.Context, connPool *pgxpool.Pool) (*Repository, error) {
+	pgRep := &Repository{Ctx: ctx, ConnPool: connPool}
 
 	_, err := pgRep.ConnPool.Exec(ctx, `
 CREATE TABLE IF NOT EXISTS orders(
@@ -28,7 +28,7 @@ order_model json);`)
 	return pgRep, nil
 }
 
-func (r *PostgresRepository) CreateOrder(id string, order json.RawMessage) error {
+func (r *Repository) CreateOrder(id string, order json.RawMessage) error {
 	_, err := r.ConnPool.Exec(r.Ctx, `
 INSERT INTO orders 
 (id, order_model) 
@@ -43,7 +43,7 @@ VALUES ($1,$2)`, id, order)
 	return nil
 }
 
-func (r *PostgresRepository) GetOrder(id string) (json.RawMessage, error) {
+func (r *Repository) GetOrder(id string) (json.RawMessage, error) {
 	var data json.RawMessage
 	err := r.ConnPool.QueryRow(r.Ctx, `SELECT order_model FROM orders WHERE id = $1`, id).Scan(&data)
 	if err != nil {
@@ -53,7 +53,7 @@ func (r *PostgresRepository) GetOrder(id string) (json.RawMessage, error) {
 	return data, nil
 }
 
-func (r *PostgresRepository) GetOrders() ([]*model.PostgresModel, error) {
+func (r *Repository) GetOrders() ([]*model.RepositoryModel, error) {
 	rows, err := r.ConnPool.Query(r.Ctx, `SELECT * FROM orders`)
 	if err != nil {
 		return nil, errors.Wrap(err, "Postgres: failed to get order from database")
@@ -67,9 +67,9 @@ func (r *PostgresRepository) GetOrders() ([]*model.PostgresModel, error) {
 	return orders, nil
 }
 
-func ReadRows(rows pgx.Rows) ([]*model.PostgresModel, error) {
-	order := &model.PostgresModel{}
-	var orders []*model.PostgresModel
+func ReadRows(rows pgx.Rows) ([]*model.RepositoryModel, error) {
+	order := &model.RepositoryModel{}
+	var orders []*model.RepositoryModel
 
 	for rows.Next() {
 		err := rows.Scan(&order.Id, &order.Order)

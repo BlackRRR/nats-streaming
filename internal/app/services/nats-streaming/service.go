@@ -7,7 +7,8 @@ import (
 	"github.com/nats-io/stan.go"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	"time"
+	"regexp"
+	"strings"
 )
 
 type Service struct {
@@ -19,9 +20,9 @@ func InitService(repo *repository.Repositories, cache *cache.Cache) *Service {
 	return &Service{repo, cache}
 }
 
-func (s *Service) SaveModelInPostgres(msg *stan.Msg) error {
-	var data *model.Model
-	var pgModel model.PostgresModel
+func (s *Service) SaveModelInRepository(msg *stan.Msg) error {
+	var data *model.Order
+	var pgModel model.RepositoryModel
 
 	err := json.Unmarshal(msg.Data, &data)
 	if err != nil {
@@ -29,6 +30,13 @@ func (s *Service) SaveModelInPostgres(msg *stan.Msg) error {
 	}
 
 	//Check for correct data comes
+	reg := regexp.MustCompile("^[0-9a-z]+$")
+	CheckUUID := reg.MatchString(data.OrderUid)
+
+	if !CheckUUID {
+		return errors.New("Service: wrong UUID")
+	}
+
 	if data == nil {
 		return errors.Wrap(err, "Service: wrong data from message")
 	}
@@ -38,13 +46,13 @@ func (s *Service) SaveModelInPostgres(msg *stan.Msg) error {
 	}
 
 	pgModel.Id = data.OrderUid
-	pgModel.Order, err = postgresqlModel(data)
+	pgModel.Order, err = JsonRawModel(data)
 	if err != nil {
-		return errors.Wrap(err, "Service: failed marshal postgresModel")
+		return errors.Wrap(err, "Service: failed marshal Order")
 	}
 
-	//save in postgres
-	err = s.PostgresRepository.CreateOrder(pgModel.Id, pgModel.Order)
+	//save in repository
+	err = s.Repository.CreateOrder(pgModel.Id, pgModel.Order)
 	if err != nil {
 		return errors.Wrap(err, "Service: failed to create order")
 	}
@@ -53,7 +61,7 @@ func (s *Service) SaveModelInPostgres(msg *stan.Msg) error {
 }
 
 func (s *Service) SaveModelInCache(msg *stan.Msg) error {
-	var data model.Model
+	var data *model.Order
 
 	err := json.Unmarshal(msg.Data, &data)
 	if err != nil {
@@ -61,13 +69,28 @@ func (s *Service) SaveModelInCache(msg *stan.Msg) error {
 	}
 
 	//Check for correct data comes
+	reg := regexp.MustCompile("^[0-9a-z]+$")
+	CheckUUID := reg.MatchString(data.OrderUid)
+
+	if !CheckUUID {
+		return errors.New("Service: wrong UUID")
+	}
+
+	if data == nil {
+		return errors.Wrap(err, "Service: wrong data from message")
+	}
+
 	if data.OrderUid == "" {
 		return errors.Wrap(err, "Service: wrong data from message")
 	}
 
 	//save in memory
-	err = s.Cache.Add(data.OrderUid, data, time.Hour*100)
+	err = s.Cache.Add(data.OrderUid, data, cache.NoExpiration)
 	if err != nil {
+		exist := strings.Contains(err.Error(), "already exists")
+		if exist {
+			return nil
+		}
 		return errors.Wrap(err, "Service: failed to add message in cache")
 	}
 
@@ -75,8 +98,9 @@ func (s *Service) SaveModelInCache(msg *stan.Msg) error {
 }
 
 func (s *Service) DataRecovery() error {
+	//recovery data if cache null
 	if s.Cache.ItemCount() == 0 {
-		orders, err := s.PostgresRepository.GetOrders()
+		orders, err := s.Repository.GetOrders()
 		if err != nil {
 			return errors.Wrap(err, "Service: failed to get orders")
 		}
@@ -85,9 +109,13 @@ func (s *Service) DataRecovery() error {
 			return nil
 		}
 
-		for i := range orders {
-			err := s.Cache.Add(orders[i].Id, orders[i].Order, time.Hour*100)
+		for _, order := range orders {
+			err := s.Cache.Add(order.Id, order.Order, cache.NoExpiration)
 			if err != nil {
+				exist := strings.Contains(err.Error(), "already exists")
+				if exist {
+					return nil
+				}
 				return errors.Wrap(err, "Service: failed to add order in cache from postgres")
 			}
 		}
@@ -111,7 +139,7 @@ func (s *Service) GetOrder(id string) (json.RawMessage, error) {
 	return order, nil
 }
 
-func postgresqlModel(data *model.Model) (json.RawMessage, error) {
+func JsonRawModel(data *model.Order) (json.RawMessage, error) {
 	order, err := json.Marshal(data)
 	if err != nil {
 		return nil, err

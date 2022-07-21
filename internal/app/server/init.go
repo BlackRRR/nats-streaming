@@ -18,7 +18,7 @@ func (h *Handler) InitRouters() *gin.Engine {
 	router := gin.New()
 	router.LoadHTMLGlob("templates/page.html")
 
-	router.GET("/:id", h.GetModel)
+	router.GET("/:id", h.GetOrder)
 
 	return router
 }

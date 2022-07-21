@@ -67,7 +67,7 @@ func Test_ServiceSave(t *testing.T) {
 		Cache:        cache.New(0, 0),
 	}
 
-	err := service.SaveModelInPostgres(sub)
+	err := service.SaveModelInRepository(sub)
 	if err != nil {
 		t.Errorf("failed to save %s", err.Error())
 	}
